@@ -12,7 +12,7 @@ def allLettersInWordPositional(letters: Iterable, word: str) -> bool:
 
     For any letter that you want to be "any" letter, use the '?' wildcard.
     For example, to search for any word containing \"y\" as the second letter
-    and \"g\" as the fifth letter, pass \"?y??g\" to the `word` argument.
+    and \"g\" as the fifth letter, pass \"?y??g\" to the `letters` argument.
     """
     try:
         for matchLetter, wordLetter in zip(letters, word, strict=True):
