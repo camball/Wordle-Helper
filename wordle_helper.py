@@ -1,13 +1,29 @@
+"""A module with helper functions for solving Wordle puzzles.
+
+Example usage:
+```py
+with open("words_dictionary.json") as words:
+    theDictionary: dict = json.load(words)
+
+for word in theDictionary:
+    if len(word) != 5:
+        continue
+
+    if allLettersInWordPositional(word, "?ar?a") and doesNotContain(word, "eoshkcnm"):
+        print(word)
+```
+"""
+
 import json
 from typing import Iterable
 
 
-def allLettersInWord(letters: Iterable, word: str) -> bool:
+def allLettersInWord(word: str, letters: Iterable) -> bool:
     """A shorthand function for a bunch of `if \"c\" in word and \"b\" in word...`'s"""
     return all((letter in word for letter in letters))
 
 
-def allLettersInWordPositional(letters: Iterable, word: str) -> bool:
+def allLettersInWordPositional(word: str, letters: Iterable) -> bool:
     """A shorthand function for a bunch of `if word[0] == \"c\" and word[2] == \"b\"...`'s
 
     For any letter that you want to be "any" letter, use the '?' wildcard.
@@ -30,6 +46,15 @@ def allLettersInWordPositional(letters: Iterable, word: str) -> bool:
     return True
 
 
+def doesNotContain(word: str, letters: Iterable) -> bool:
+    """If `word` does not contain any of the letters in `letters`, this returns True.
+    Otherwise, this returns False.
+
+    Useful for filtering out any letters that are known not to be in the word.
+    """
+    return False if any((letter in word for letter in letters)) else True
+
+
 def main():
     with open("words_dictionary.json") as words:
         theDictionary: dict = json.load(words)
@@ -40,10 +65,12 @@ def main():
 
         #! Make sure to pass all lowercase letters! This could be changed, but would slow computation time.
 
-        if allLettersInWordPositional("n?l?n", word):
+        if allLettersInWordPositional(word, "?ar?a") and doesNotContain(
+            word, "eoshkcnm"
+        ):
             print(word)
 
-        # if allLettersInWord("clsh", word):
+        # if allLettersInWord(word, "clsh"):
         #     print(word)
 
 
