@@ -1,24 +1,22 @@
 import json
 import wordle
+from functools import partial
 
 
 def main():
     with open("words_dictionary.json") as words:
         theDictionary: dict = json.load(words)
 
-    for word in theDictionary:
-        if len(word) != 5:
-            continue
+    found_words = filter(
+        partial(wordle.doesNotContain, letters="eoshkcnm"),
+        filter(
+            partial(wordle.allLettersInWordPositional, letters="?ar?a"),
+            filter(lambda word: len(word) == 5, theDictionary),
+        ),
+    )
 
-        #! Make sure to pass all lowercase letters! This could be changed, but would slow computation time.
-
-        if wordle.allLettersInWordPositional(word, "?ar?a") and wordle.doesNotContain(
-            word, "eoshkcnm"
-        ):
-            print(word)
-
-        # if allLettersInWord(word, "clsh"):
-        #     print(word)
+    for word in found_words:
+        print(word)
 
 
 if __name__ == "__main__":

@@ -17,6 +17,9 @@ for word in theDictionary:
         wordle.doesNotContain(word, "eoshkcnm")
     ):
         print("Found word:", word)
+
+Make sure to pass all lowercase letters to the `letters` argument of all functions.
+This could be fixed, but would slow computation time.
 ```
 """
 
