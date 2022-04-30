@@ -17,10 +17,10 @@ for word in theDictionary:
         wordle.doesNotContain(word, "eoshkcnm")
     ):
         print("Found word:", word)
+```
 
 Make sure to pass all lowercase letters to the `letters` argument of all functions.
 This could be fixed, but would slow computation time.
-```
 """
 
 from typing import Iterable
@@ -60,4 +60,4 @@ def doesNotContain(word: str, letters: Iterable) -> bool:
 
     Useful for filtering out any letters that are known not to be in the word.
     """
-    return False if any((letter in word for letter in letters)) else True
+    return not any((letter in word for letter in letters))
