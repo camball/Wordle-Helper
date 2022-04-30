@@ -2,6 +2,9 @@
 
 Example usage:
 ```py
+import wordle
+import json
+
 with open("words_dictionary.json") as words:
     theDictionary: dict = json.load(words)
 
@@ -9,12 +12,14 @@ for word in theDictionary:
     if len(word) != 5:
         continue
 
-    if allLettersInWordPositional(word, "?ar?a") and doesNotContain(word, "eoshkcnm"):
-        print(word)
+    if (
+        wordle.allLettersInWordPositional(word, "?ar?a") and
+        wordle.doesNotContain(word, "eoshkcnm")
+    ):
+        print("Found word:", word)
 ```
 """
 
-import json
 from typing import Iterable
 
 
@@ -53,26 +58,3 @@ def doesNotContain(word: str, letters: Iterable) -> bool:
     Useful for filtering out any letters that are known not to be in the word.
     """
     return False if any((letter in word for letter in letters)) else True
-
-
-def main():
-    with open("words_dictionary.json") as words:
-        theDictionary: dict = json.load(words)
-
-    for word in theDictionary:
-        if len(word) != 5:
-            continue
-
-        #! Make sure to pass all lowercase letters! This could be changed, but would slow computation time.
-
-        if allLettersInWordPositional(word, "?ar?a") and doesNotContain(
-            word, "eoshkcnm"
-        ):
-            print(word)
-
-        # if allLettersInWord(word, "clsh"):
-        #     print(word)
-
-
-if __name__ == "__main__":
-    main()
