@@ -8,9 +8,9 @@ def main():
         theDictionary: dict = json.load(words)
 
     found_words = filter(
-        partial(wordle.doesNotContain, letters="eoshkcnm"),
+        partial(wordle.doesNotContain, letters="asfx"),
         filter(
-            partial(wordle.allLettersInWordPositional, letters="?ar?a"),
+            partial(wordle.allLettersInWordPositional, letters="?o?er"),
             filter(lambda word: len(word) == 5, theDictionary),
         ),
     )

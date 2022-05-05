@@ -24,6 +24,7 @@ This could be fixed, but would slow computation time.
 """
 
 from typing import Iterable
+from sys import exit as sys_exit
 
 
 def allLettersInWord(word: str, letters: Iterable) -> bool:
@@ -49,7 +50,7 @@ def allLettersInWordPositional(word: str, letters: Iterable) -> bool:
         print(
             "Error: ensure that you have passed a `letters` argument of the same length as `word` to `allLettersInWordPositional()`"
         )
-        exit()
+        sys_exit()
 
     return True
 
