@@ -28,7 +28,6 @@ from functools import partial
 import json
 from typing import Iterable
 from sys import exit as sys_exit
-from unittest import result
 
 
 def allLettersInWord(word: str, letters: Iterable) -> bool:
