@@ -4,24 +4,26 @@ from functools import partial
 
 
 def main():
-    with open("words_dictionary.json") as words:
-        theDictionary: dict = json.load(words)
+    theDictionary = wordle.getDictionary()
 
-    word_prototype = "?adge"
+    word_prototype = "mi???"
 
     found_words = list(
         filter(
-            partial(wordle.doesNotContain, letters="rtoshcm"),
+            partial(wordle.doesNotContain, letters="oarewngucy"),
             filter(
                 partial(wordle.allLettersInWordPositional, letters=word_prototype),
-                filter(lambda word: len(word) == 5, theDictionary),
+                filter(
+                    partial(wordle.allLettersInWord, letters="st"),
+                    theDictionary,
+                ),
             ),
         )
     )
-    # for word in found_words:
-    #     print(word)
-    for word in wordle.suggestWordsWithMaxInformation(found_words, word_prototype, 3):
+    for word in found_words:
         print(word)
+    # for word in wordle.suggestWordsWithMaxInformation(found_words, word_prototype, 4):
+    #     print(word)
 
 
 if __name__ == "__main__":

@@ -6,9 +6,9 @@ import wordle
 import json
 
 with open("words_dictionary.json") as words:
-    theDictionary: dict = json.load(words)
+    the_dictionary: dict = json.load(words)
 
-for word in theDictionary:
+for word in the_dictionary:
     if len(word) != 5:
         continue
 
@@ -28,6 +28,11 @@ from functools import partial
 import json
 from typing import Iterable
 from sys import exit as sys_exit
+
+
+def getDictionary() -> set[str]:
+    with open("words_dictionary.json") as words:
+        return set(filter(lambda word: len(word) == 5, json.load(words)))
 
 
 def allLettersInWord(word: str, letters: Iterable) -> bool:
@@ -103,9 +108,7 @@ def suggestWordsWithMaxInformation(
         if idx in unknown_letter_indices
     ]
 
-    with open("words_dictionary.json") as words:
-        theDictionary: dict = json.load(words)
-    len_five_words = list(filter(lambda word: len(word) == 5, theDictionary))
+    len_five_words = getDictionary()
 
     most_common_letters = Counter(unknown_letters)
 
@@ -145,3 +148,10 @@ def suggestWordsWithMaxInformation(
                 break
 
     return found_words
+
+
+class Wordle:
+    THE_DICTIONARY = getDictionary()
+
+    def __init__(self) -> None:
+        pass
