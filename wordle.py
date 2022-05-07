@@ -181,11 +181,28 @@ def _printMenu(options: dict[str, str]):
 
 
 def _printInstructions():
-    print("These are the instructions... please write me lol\n")
+    print(
+        """1. Each round, you will be provided with a word (or multiple word options) to play from.
+2. Play a word.
+3. Follow the prompts to enter the letter information you received.
+    - First, enter the word you played
+    - Second, enter a string of characters corresponding to the information you got back.
+        - If the letter was GREY (not in the word), enter X in the letter's position.
+        - If the letter was YELLOW (somewhere in the word), enter Y in the letter's position.
+        - If the letter was GREEN (in the right spot in the word), enter G in the letter's position.
+    
+    For example, if you play the word GHOST, and 
+        - the G, H, and T are not in the word (i.e., in grey),
+        - the O is in the word (i.e., in yellow), and
+        - the S is in the word in the right place (i.e., in green),
+    then enter the string "XXYGX"
+
+4. Repeat this process until the game is over.\n"""
+    )
 
 
 def _printCredits():
-    print("These are the credits... please write me lol\n")
+    print("This program © 2022 Cameron Ball. All rights reserved.\n")
 
 
 def main():
