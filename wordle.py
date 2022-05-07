@@ -29,6 +29,8 @@ import json
 from typing import Iterable
 from sys import exit as sys_exit
 
+from click import option
+
 
 def getDictionary() -> set[str]:
     with open("words_dictionary.json") as words:
@@ -150,8 +152,66 @@ def suggestWordsWithMaxInformation(
     return found_words
 
 
+def _parseInput(text: str):
+    ...
+
+
 class Wordle:
     THE_DICTIONARY = getDictionary()
 
     def __init__(self) -> None:
-        pass
+        self._letters_not_in_word = str()
+        self._letters_in_word_positional = "?????"
+        self._letters_in_word = str()
+
+    def play(self):
+        print("Play the word: SOARE")
+        while True:
+            pass
+
+
+def _printMenu(options: dict[str, str]):
+    for k, v in options.items():
+        print(
+            "{k:<{maxKeyLen}} : {v:>4}".format(
+                k=k, maxKeyLen=max(len(k) for k in options), v=v
+            )
+        )
+    print("")
+
+
+def _printInstructions():
+    print("These are the instructions... please write me lol\n")
+
+
+def _printCredits():
+    print("These are the credits... please write me lol\n")
+
+
+def main():
+    print("Welcome to the WORDLE solver!\n")
+
+    menu_options = {"Instructions": "I", "Play Game": "P", "Credits": "C", "Quit": "Q"}
+
+    _printMenu(menu_options)
+    while True:
+        cmd = input("> ").upper()
+        print("")
+        if cmd not in menu_options.values():
+            print("Invalid option. Valid options include:")
+            _printMenu(menu_options)
+        elif cmd == "I":
+            _printInstructions()
+        elif cmd == "P":
+            game = Wordle()
+            game.play()
+        elif cmd == "C":
+            _printCredits()
+        elif cmd == "Q":
+            break
+
+    print("Thanks for playing!")
+
+
+if __name__ == "__main__":
+    main()
