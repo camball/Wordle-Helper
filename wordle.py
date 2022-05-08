@@ -47,19 +47,12 @@ def allLettersInWordPositional(word: str, letters: Sequence) -> bool:
     For example, to search for any word containing \"y\" as the second letter
     and \"g\" as the fifth letter, pass \"?y??g\" to the `letters` argument.
     """
-    try:
-        for matchLetter, wordLetter in zip(letters, word, strict=True):
-            if matchLetter == "?":
-                continue
+    for matchLetter, wordLetter in zip(letters, word, strict=True):
+        if matchLetter == "?":
+            continue
 
-            if matchLetter != wordLetter:
-                return False
-    except ValueError:
-        print(
-            """Error: ensure that you have passed a `letters` argument of the 
-same length as `word` to `allLettersInWordPositional()`"""
-        )
-        sys_exit()
+        if matchLetter != wordLetter:
+            return False
 
     return True
 
@@ -79,19 +72,11 @@ def noLettersInWrongSpotsThatAreInSameSpotsInWord(word: str, letters: Sequence) 
     for four hours straight now, but I'm in too deep to stop so here we are.
     I'm tired.
     """
-    try:
-        for matchLetter, wordLetter in zip(letters, word, strict=True):
-            if matchLetter == wordLetter:
-                return False
-            else:
-                continue
-
-    except ValueError:
-        print(
-            """Error: ensure that you have passed a `letters` argument of the 
-same length as `word` to `allLettersInWordPositional()`"""
-        )
-        sys_exit()
+    for matchLetter, wordLetter in zip(letters, word, strict=True):
+        if matchLetter == wordLetter:
+            return False
+        else:
+            continue
 
     return True
 
@@ -313,7 +298,9 @@ class Wordle:
 
     def play(self) -> None:
         # always play SOARE first
-        print("First, play the word: SOARE\n")
+        print(
+            "First, it is recommended to play the word SOARE, but you can play whatever you would like.\n"
+        )
 
         while True:
             # process user input
