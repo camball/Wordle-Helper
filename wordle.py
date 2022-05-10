@@ -29,6 +29,15 @@ import json
 from typing import Iterable, Sequence
 from sys import exit as sys_exit
 
+import inflect
+
+
+def removePlurals(word_list: Iterable) -> set[str]:
+    inf = inflect.engine()
+    # documentation is hard to understand for this function, so this was
+    # written with the help of https://stackoverflow.com/a/39077936/
+    return {word for word in word_list if not inf.singular_noun(word)}
+
 
 def getDictionary() -> set[str]:
     with open("words_dictionary.json") as words:
@@ -57,13 +66,39 @@ def allLettersInWordPositional(word: str, letters: Sequence) -> bool:
     return True
 
 
-def doesNotContain(word: str, letters: Iterable) -> bool:
-    """If `word` does not contain any of the letters in `letters`, this returns True.
+def doesNotContain(
+    word: Sequence[str],
+    lettersNotInWord: Iterable,
+    knownCorrectPositions: Sequence[str] | None = None,
+) -> bool:
+    """Useful for filtering out any letters that are known not to be in the word.
+
+    If `word` does not contain any of the letters in `letters`, this returns True.
     Otherwise, this returns False.
 
-    Useful for filtering out any letters that are known not to be in the word.
+    If `knownCorrectPositions` is passed (i.e., not `None`), then this function
+    only checks letter positions in the word that are unknown. For example, if
+    the word "THOSE" is passed to `word` and the sequence "XXYGG" is passed to
+    `knownCorrectPositions`, then only the letters ['T', 'H', 'O'] are
+    considered in this function's logic. `knownCorrectPositions` expects the
+    following syntax:
+      - If the letter was GREY (not in the word), put X in the letter's position.
+      - If the letter was YELLOW (somewhere in the word), put Y in the letter's position.
+      - If the letter was GREEN (in the right spot in the word), put G in the letter's position.
+
+    Passing `knownCorrectPositions` is useful for checking words that contain
+    duplicates of the same letter, where in some places the letter is known to
+    be in the correct position, but you know it doesn't contain any more
+    instances of that letter throughout the word.
     """
-    return not any((letter in word for letter in letters))
+    if knownCorrectPositions:
+        word = [
+            letter
+            for letter, letterInfo in zip(word, knownCorrectPositions)
+            if letterInfo.upper() != "G"
+        ]
+
+    return not any((letter in word for letter in lettersNotInWord))
 
 
 def noLettersInWrongSpotsThatAreInSameSpotsInWord(word: str, letters: Sequence) -> bool:
@@ -213,8 +248,24 @@ def suggestWordsWithMaxInformation(
 
 
 class Wordle:
-    THE_DICTIONARY = getDictionary()
+    """ """
+
+    """
+    removePlurals reduces possible words from 15918 to 12735. Nice!
+    when suggesting words that we think are the correct words, we never want to
+    suggest a plural, as those will never be correct. However, when there is
+    not enough information to try and solve the Wordle, we DON'T filter out
+    plurals (i.e., in suggestWordsWithMaxInformation()), so that we can suggest
+    the best possible guess, whether it would be a winner or not.
+    """
+    THE_DICTIONARY = removePlurals(getDictionary())
+
     _found_words_threshold = 30
+
+    def __init__(self) -> None:
+        self._letters_not_in_word = set()
+        self._letters_in_word_positional = ["?", "?", "?", "?", "?"]
+        self._letters_in_word_in_wrong_spots = ["?", "?", "?", "?", "?"]
 
     @staticmethod
     def _lettersInWordInWrongSpotsToSet(
@@ -257,11 +308,6 @@ class Wordle:
 
         return lettersNotInWord, lettersInWordInWrongSpots, lettersInWordPositional
 
-    def __init__(self) -> None:
-        self._letters_not_in_word = set()
-        self._letters_in_word_positional = ["?", "?", "?", "?", "?"]
-        self._letters_in_word_in_wrong_spots = ["?", "?", "?", "?", "?"]
-
     def _updateWordInformation(
         self,
         lettersNotInWord: set,
@@ -297,7 +343,6 @@ class Wordle:
                 self._letters_in_word_in_wrong_spots[idx] = "?"
 
     def play(self) -> None:
-        # always play SOARE first
         print(
             "First, it is recommended to play the word SOARE, but you can play whatever you would like.\n"
         )
@@ -340,7 +385,11 @@ class Wordle:
             # compute most likely words for user
             found_words = list(
                 filter(
-                    partial(doesNotContain, letters=self._letters_not_in_word),
+                    partial(
+                        doesNotContain,
+                        lettersNotInWord=self._letters_not_in_word,
+                        knownCorrectPositions=self._letters_in_word_positional,
+                    ),
                     filter(
                         partial(
                             allLettersInWordPositional,

@@ -7,3 +7,7 @@ I justify myself using these scripts because it's the same process I do in my he
 ## Description
 
 This is the helper tool I coded to help me in the game of [Wordle](https://www.nytimes.com/games/wordle/index.html).
+
+## Dependencies
+
+This project uses the [inflect](https://pypi.org/project/inflect/) library to not suggest plural words to the user (as WORDLE never uses plurals as the correct answer).
