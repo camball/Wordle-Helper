@@ -4,6 +4,7 @@
 
 ```sh
 git clone https://github.com/camball/Wordle-Helper
+pip3 install inflect
 ```
 
 ## How to Run
@@ -11,7 +12,6 @@ git clone https://github.com/camball/Wordle-Helper
 From the directory this repository was downloaded into, run:
 
 ```sh
-pip3 install inflect
 python3 -m wordle
 ```
 
