@@ -25,6 +25,7 @@ This could be fixed, but would slow computation time.
 
 from collections import Counter
 from functools import partial
+from string import ascii_lowercase
 import json
 from typing import Iterable, Sequence
 from sys import exit as sys_exit
@@ -95,7 +96,7 @@ def doesNotContain(
         word = [
             letter
             for letter, letterInfo in zip(word, knownCorrectPositions)
-            if letterInfo.upper() != "G"
+            if letterInfo == "?"
         ]
 
     return not any((letter in word for letter in lettersNotInWord))
@@ -265,13 +266,36 @@ class Wordle:
     def __init__(self) -> None:
         self._letters_not_in_word = set()
         self._letters_in_word_positional = ["?", "?", "?", "?", "?"]
-        self._letters_in_word_in_wrong_spots = ["?", "?", "?", "?", "?"]
+        self._positions_of_letters_in_wrong_spots: dict[str, list[bool]] = {
+            letter: [False] * 5 for letter in ascii_lowercase
+        }
+        """
+        This instance var can be tricky to understand, so here's an attempt at
+        an explanation. Every letter in the alphabet can be discovered to not
+        be in the word in multiple positions (but be in the word *somewhere*),
+        so we need a way to represent the positions that *each letter* is known
+        not to be in. It's best to see an example. If this argument is set to:
+        {
+            "a": [True, False, False, True, False],
+            "b": [False, False, False, False, True],
+            ...
+        }
+        then this means that "we know the letter 'a' is NOT in the 0th or 4th
+        positions, and we know the letter 'b' is NOT in the 0th-3rd positions.
+
+        In other words, when the value is set to `True` for a given position,
+        we know the letter is somewhere in the word-just not at that position.
+        """
 
     @staticmethod
     def _lettersInWordInWrongSpotsToSet(
-        positionsOfLettersInWrongSpots: Sequence[str],
+        positionsOfLettersInWrongSpots: dict[str, list[bool]],
     ) -> set[str]:
-        return {char for char in positionsOfLettersInWrongSpots if char != "?"}
+        return {
+            letter
+            for letter, positions in positionsOfLettersInWrongSpots.items()
+            if any(positions)
+        }
 
     @staticmethod
     def _infoHasInvalidCharacters(information: str) -> bool:
@@ -328,7 +352,7 @@ class Wordle:
         # update letters in word in wrong spots
         for idx, letter in enumerate(lettersInWordInWrongSpots):
             if letter != "?":
-                self._letters_in_word_in_wrong_spots[idx] = letter
+                self._positions_of_letters_in_wrong_spots[letter][idx] = True
 
         # update letters in word with known position
         for idx, letter in enumerate(lettersInWordPositional):
@@ -336,11 +360,12 @@ class Wordle:
                 self._letters_in_word_positional[idx] = letter
 
         # if we discover a known-position letter, take it out of the letters-in-wrong-spots list
-        for idx, (positionalLetter, wrongSpotLetter) in enumerate(
-            zip(self._letters_in_word_positional, self._letters_in_word_in_wrong_spots)
-        ):
-            if positionalLetter != "?":
-                self._letters_in_word_in_wrong_spots[idx] = "?"
+        for idx, letter in enumerate(self._letters_in_word_positional):
+            if letter != "?":
+                # This will never throw KeyError/is safe. We are always passing
+                # a letter from ascii_lowercase and the dictionary always
+                # contains all of ascii_lowercase as keys.
+                self._positions_of_letters_in_wrong_spots[letter][idx] = True
 
     def play(self) -> None:
         print(
@@ -384,22 +409,22 @@ class Wordle:
 
             # compute most likely words for user
             found_words = list(
-                filter(
+                filter(  # filter out all words that contain letters in the "not in word" list (in the non-positional spots)
                     partial(
                         doesNotContain,
                         lettersNotInWord=self._letters_not_in_word,
                         knownCorrectPositions=self._letters_in_word_positional,
                     ),
-                    filter(
+                    filter(  # filter out all words that don't match the positional letter prototype
                         partial(
                             allLettersInWordPositional,
                             letters=self._letters_in_word_positional,
                         ),
-                        filter(
+                        filter(  # filter out all words that don't have all the yellow letters
                             partial(
                                 allLettersInWord,
                                 letters=Wordle._lettersInWordInWrongSpotsToSet(
-                                    self._letters_in_word_in_wrong_spots
+                                    self._positions_of_letters_in_wrong_spots
                                 ),
                             ),
                             Wordle.THE_DICTIONARY,
@@ -422,8 +447,8 @@ the most information out of the next word:\n"""
                     word_list=found_words,
                     positionalLetters=self._letters_in_word_positional,
                     min_search_letters=4,
-                    positionsOfLettersInWrongSpots=self._letters_in_word_in_wrong_spots,
-                )
+                    # positionsOfLettersInWrongSpots=self._positions_of_letters_in_wrong_spots,
+                )  # TODO: rewrite suggestWordsWithMaxInformation() to accomodate new argument
 
                 # only return the top five results
                 for idx, word in enumerate(word_suggestions[:5]):
