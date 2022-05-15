@@ -35,6 +35,7 @@ import inflect
 
 
 def removePlurals(word_list: Iterable) -> set[str]:
+    """Remove all plural nouns from `word_list`. Powered by the `inflect` library."""
     inf = inflect.engine()
     # documentation is hard to understand for this function, so this was
     # written with the help of https://stackoverflow.com/a/39077936/
@@ -42,6 +43,7 @@ def removePlurals(word_list: Iterable) -> set[str]:
 
 
 def getDictionary() -> set[str]:
+    """Return a set of all 5-letter words."""
     with open("words_dictionary.json") as words:
         return set(filter(lambda word: len(word) == 5, json.load(words)))
 
@@ -461,10 +463,8 @@ the most information out of the next word:\n"""
                 )
             else:
                 print(
-                    """The following words were found. Recall that WORDLE never
-uses plural words (i.e., "trees") as the answer. Also
-recall that most of the time, common words are more likely
-to be the answer than very odd words.\n"""
+                    """The following words were found. Recall that most of the
+time, common words are more likely to be the answer than very odd words.\n"""
                 )
 
                 for word in found_words:
@@ -473,23 +473,23 @@ to be the answer than very odd words.\n"""
                 print("")
 
 
-def wordFinder():
+def _wordFinder():
+    theDictionary = getDictionary()
+
     while True:
-        resp = input("Filter plurals from results? [Y/n]: ")
-        if resp[0].upper() != "Y" and resp[0].upper() != "N":
+        resp = input("Filter plurals from results? [Y/n]: ")[0].upper()
+        if resp != "Y" and resp != "N":
             print("Please enter a valid response... [y/n]")
         else:
-            if resp[0].upper() == "Y":
-                theDictionary = getDictionary()
-            else:
-                theDictionary = removePlurals(getDictionary())
+            if resp == "Y":
+                theDictionary = removePlurals(theDictionary)
             break
 
-    positionalLetterCheck = re.compile(r"^[a-zA-Z?]{5}$")
+    positionalLetterCheck = re.compile(r"^[a-z?]{5}$")
     while True:
         word_prototype = input(
-            'Enter green letters, with unknown letters as questions marks (i.e., "ap??e"): '
-        )
+            'Enter green letters, with unknown letters as questions marks (e.g., "ap??e"): '
+        ).lower()
         if not positionalLetterCheck.match(word_prototype):
             print(
                 "Please ensure your response only contains letters and/or question marks..."
@@ -497,16 +497,16 @@ def wordFinder():
         else:
             break
 
-    normalLetterCheck = re.compile(r"^[a-zA-Z]*$")
+    normalLetterCheck = re.compile(r"^[a-z]*$")
     while True:
-        letters = input('Enter yellow letters (i.e., "rpi"): ')
+        letters = input('Enter yellow letters (e.g., "rpi"): ').lower()
         if not normalLetterCheck.match(letters):
             print("Please ensure your response only contains letters...")
         else:
             break
 
     while True:
-        lettersNotInWord = input('Enter grey letters (i.e., "qpgt"): ')
+        lettersNotInWord = input('Enter grey letters (e.g., "qpgt"): ').lower()
         if not normalLetterCheck.match(lettersNotInWord):
             print("Please ensure your response only contains letters...")
         else:
@@ -524,6 +524,12 @@ def wordFinder():
             ),
         )
     )
+
+    print(
+        """\nThe following words were found. Recall that most of the time,
+common words are more likely to be the answer than very odd words.\n"""
+    )
+
     for word in found_words:
         print(word)
 
@@ -590,7 +596,7 @@ def main():
         elif cmd == "I":
             _printInstructions()
         elif cmd == "A":
-            wordFinder()
+            _wordFinder()
         elif cmd == "P":
             game = Wordle()
             game.play()
