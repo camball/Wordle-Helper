@@ -26,6 +26,7 @@ This could be fixed, but would slow computation time.
 from collections import Counter
 from functools import partial
 from string import ascii_lowercase
+import re
 import json
 from typing import Iterable, Sequence
 from sys import exit as sys_exit
@@ -472,6 +473,63 @@ to be the answer than very odd words.\n"""
                 print("")
 
 
+def wordFinder():
+    while True:
+        resp = input("Filter plurals from results? [Y/n]: ")
+        if resp[0].upper() != "Y" and resp[0].upper() != "N":
+            print("Please enter a valid response... [y/n]")
+        else:
+            if resp[0].upper() == "Y":
+                theDictionary = getDictionary()
+            else:
+                theDictionary = removePlurals(getDictionary())
+            break
+
+    positionalLetterCheck = re.compile(r"^[a-zA-Z?]{5}$")
+    while True:
+        word_prototype = input(
+            'Enter green letters, with unknown letters as questions marks (i.e., "ap??e"): '
+        )
+        if not positionalLetterCheck.match(word_prototype):
+            print(
+                "Please ensure your response only contains letters and/or question marks..."
+            )
+        else:
+            break
+
+    normalLetterCheck = re.compile(r"^[a-zA-Z]*$")
+    while True:
+        letters = input('Enter yellow letters (i.e., "rpi"): ')
+        if not normalLetterCheck.match(letters):
+            print("Please ensure your response only contains letters...")
+        else:
+            break
+
+    while True:
+        lettersNotInWord = input('Enter grey letters (i.e., "qpgt"): ')
+        if not normalLetterCheck.match(lettersNotInWord):
+            print("Please ensure your response only contains letters...")
+        else:
+            break
+
+    found_words = list(
+        filter(
+            partial(doesNotContain, lettersNotInWord=lettersNotInWord),
+            filter(
+                partial(allLettersInWordPositional, letters=word_prototype),
+                filter(
+                    partial(allLettersInWord, letters=letters),
+                    theDictionary,
+                ),
+            ),
+        )
+    )
+    for word in found_words:
+        print(word)
+
+    print("")
+
+
 def _printMenu(options: dict[str, str]):
     for k, v in options.items():
         print(
@@ -484,7 +542,11 @@ def _printMenu(options: dict[str, str]):
 
 def _printInstructions():
     print(
-        """1. Each round, you will be provided with a word (or multiple word options) to play from.
+        """For interactive WORDLE solver mode, enter 'P' at the menu.
+For an advanced word finder mode to help with individual WORDLE steps, enter 'A' at the menu.
+
+--- Interactive Mode Instructions ---
+1. Each round, you will be provided with a word (or multiple word options) to play from.
 2. Play a word in WORDLE.
 3. Follow the prompts to enter the letter information you received from the word you played.
     - First, enter the word you played
@@ -510,7 +572,13 @@ def _printCredits():
 def main():
     print("Welcome to the WORDLE solver!\n")
 
-    menu_options = {"Instructions": "I", "Play Game": "P", "Credits": "C", "Quit": "Q"}
+    menu_options = {
+        "Instructions": "I",
+        "Play Game": "P",
+        "Advanced Word Finder Mode": "A",
+        "Credits": "C",
+        "Quit": "Q",
+    }
 
     _printMenu(menu_options)
     while True:
@@ -521,6 +589,8 @@ def main():
             _printMenu(menu_options)
         elif cmd == "I":
             _printInstructions()
+        elif cmd == "A":
+            wordFinder()
         elif cmd == "P":
             game = Wordle()
             game.play()
