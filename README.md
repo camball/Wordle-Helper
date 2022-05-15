@@ -4,6 +4,7 @@
 
 ```sh
 git clone https://github.com/camball/Wordle-Helper
+pip3 install inflect
 ```
 
 ## How to Run
