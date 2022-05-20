@@ -105,32 +105,87 @@ def doesNotContain(
     return not any((letter in word for letter in lettersNotInWord))
 
 
-def noLettersInWrongSpotsThatAreInSameSpotsInWord(word: str, letters: Sequence) -> bool:
-    """My sincerest apologies for the abomination of a function name. It's 4:28
-    AM as I am coding this, and I had no idea what to call it. I've been coding
-    for four hours straight now, but I'm in too deep to stop so here we are.
-    I'm tired.
+# def noLettersInWrongSpotsThatAreInSameSpotsInWord(word: str, letters: Sequence) -> bool:
+#     """My sincerest apologies for the abomination of a function name. It's 4:28
+#     AM as I am coding this, and I had no idea what to call it. I've been coding
+#     for four hours straight now, but I'm in too deep to stop so here we are.
+#     I'm tired.
+#     """
+#     for matchLetter, wordLetter in zip(letters, word, strict=True):
+#         if matchLetter == wordLetter:
+#             return False
+#         else:
+#             continue
+
+#     return True
+
+
+def _filter_with_yellow_letters(
+    word: str, yellow_letter_positions: dict[str, list[bool]]
+) -> bool:
     """
-    for matchLetter, wordLetter in zip(letters, word, strict=True):
-        if matchLetter == wordLetter:
+    We want to filter out words that have any letter
+
+    If `word` is "angry" and our dict is:
+    {
+        "a": [True, False, False, False, True]
+        ...
+    }
+    then we should return False, because `word` contains a letter that has
+
+    For each letter in the dictionary, checks if the location in `word` for that letter returns True.
+    """
+    # for dict_letter, places_letter_cannot_be in yellow_letter_positions.items():
+    #     for word_letter, letter_is_yellow in zip(word, places_letter_cannot_be):
+    #         if letter_is_yellow and dict_letter == word_letter:
+    #             return False
+
+    #     # if the letter isn't in the word at all... obviously return False
+    #     if dict_letter not in word:
+    #         return False
+
+    # return True
+
+    """
+    The following implementation and the commented-out above implementation return the exact same results.
+    I think the below one is a better implementation, though. It was the 2nd I wrote.
+    """
+
+    for yellow_letter, positions in yellow_letter_positions.items():
+        for idx, letter in enumerate(word):
+            if letter == yellow_letter and positions[idx] is True:
+                return False
+
+        # if the letter isn't in the word at all... obviously return False
+        if yellow_letter not in word:
             return False
-        else:
-            continue
 
     return True
+
+
+def _filter_with_yellow_letters_run_tests():
+    words = ["angry", "alias", "super", "place", "house", "angse", "nasty"]
+
+    yellow_letter_positions = {
+        "a": [True, False, False, False, False],
+        "s": [False, False, False, True, False],
+    }
+
+    for word in words:
+        print(word, _filter_with_yellow_letters(word, yellow_letter_positions))
 
 
 def suggestWordsWithMaxInformation(
     word_list: list[str],
     positionalLetters: Sequence[str],
-    min_search_letters: int,
-    positionsOfLettersInWrongSpots: Sequence[str] | None = None,
-):
+    num_search_letters: int,
+    positions_of_yellow_letters: dict[str, list[bool]] | None = None,
+) -> list[str]:
     """
     Scans through `word_list`, and creates a distribution of the most frequent
     letters from each word. It then finds words from the dictionary that
     contain the as many of the most common letters as possible (minimum allowed
-    amount specified by `min_search_letters`), and suggests words to play next
+    amount specified by `num_search_letters`), and suggests words to play next
     that would maximise the amount of information you could get from a single
     word.
 
@@ -139,35 +194,31 @@ def suggestWordsWithMaxInformation(
     information you already have (i.e., by calling `wordle.doesNotContain()`,
     etc.). Then, pass that filtered list to this function's `word_list`.
 
-    `min_search_letters` must be on the interval [1,5]. You probably won't get
+    `num_search_letters` must be on the interval [1,5]. You probably won't get
     useful results unless you use it with 3 or 4 though, as 5 will most likely
     yield no results as it is too restrictive, and 1 or 2 will likely yield too
     many results. However, trying 5 first may not be a bad idea because on the
     off chance that it does return a result, that would yield the highest
     amount of information.
-
-    If a value is passed to `positionsOfLettersInWrongSpots`, this function
-    will use those values to better reduce `word_list`. The value passed to
-    this argument should be five characters long and of the form "?F??R", for
-    example. In that example, the syntax means "F is in the word, but it's not
-    in the 2nd spot, and R is in the word, but it's not in the 5th spot." If
-    nothing is passed, this functionality is ignored. The philosophy behind
-    this argument's existence is that if we have a letter that we know is in
-    the word, but not where it is in the word, we don't want to play a word
-    that has the letter in that same spot; we want to try a new spot to try and
-    discover a positional letter.
-
-    Functionality that may make it into this function at a future date:
-    If a value is passed to this argument (positionsOfLettersInWrongSpots) and
-    no results are returned, this function resorts to how it would function as
-    if nothing was passed to this argument as a last-chance attempt to return
-    some sort of results.
     """
-    if positionsOfLettersInWrongSpots and len(positionsOfLettersInWrongSpots) != 5:
-        raise ValueError(
-            "argument `positionsOfLettersInWrongSpots` must be of length 5."
-        )
 
+    """
+    Compute most common letters from `word_list` that aren't already known.
+    Say our word list is:
+    - under
+    - alias
+    - class
+    and `positionalLetters` is '?g??s'.
+
+    Then this portion of this function will ignore the 1 and 4 indices, since we
+    already know what's at those spots. It will take the letters from the 0, 2, 3
+    spots of all words in `word_list` (i.e., {u,d,e,a,i,c,s}) and give us a Counter
+    object which we use to get `num_search_letters` most common letters, which we
+    store in `top_n_letters`.
+    
+    Those letters are used to filter the dictionary by, so we are only searching
+    with the most likely guesses.
+    """
     unknown_letter_indices = [
         idx for idx, letter in enumerate(positionalLetters) if letter == "?"
     ]
@@ -181,63 +232,67 @@ def suggestWordsWithMaxInformation(
         if idx in unknown_letter_indices
     ]
 
-    len_five_words = getDictionary()
+    THE_DICTIONARY = getDictionary()
 
     most_common_letters = Counter(unknown_letters)
 
     top_n_letters = [
-        letter for letter, _ in most_common_letters.most_common(min_search_letters)
+        letter for letter, _ in most_common_letters.most_common(num_search_letters)
     ]
 
-    if positionsOfLettersInWrongSpots:
+    """
+    Attempt to find suggestions by filtering the dictionary.
+    """
+    if positions_of_yellow_letters:
         found_words = list(
             filter(
                 partial(
-                    noLettersInWrongSpotsThatAreInSameSpotsInWord,
-                    letters=positionsOfLettersInWrongSpots,
+                    _filter_with_yellow_letters,
+                    yellow_letter_positions=positions_of_yellow_letters,
                 ),
-                filter(
-                    partial(allLettersInWord, letters=top_n_letters),
-                    len_five_words,
-                ),
+                THE_DICTIONARY,
             )
         )
     else:
         found_words = list(
             filter(
                 partial(allLettersInWord, letters=top_n_letters),
-                len_five_words,
+                THE_DICTIONARY,
             )
         )
 
+    """
+    If no words were found, use a different set of letters and see if we get results that way.
+
+    For example, if our top 3 most common letters are [r, n, k], but no results are
+    returned, ditch the 'k' and move onto the next most common letter, searching with
+    [r, n, t], for example.
+    """
     if not found_words:
         offset = 1  # initialise here, increment later if no results
-        while min_search_letters + offset <= len(most_common_letters):
+        while num_search_letters + offset <= len(most_common_letters):
             # remove the least most common letter and see if adding the next
             # most common letter will give us any results
             top_n_letters.pop()
             top_n_letters.append(
-                most_common_letters.most_common(min_search_letters + offset).pop()[0]
+                most_common_letters.most_common(num_search_letters + offset).pop()[0]
             )
 
-            if positionsOfLettersInWrongSpots:
+            if positions_of_yellow_letters:
                 results = list(
                     filter(
                         partial(
-                            noLettersInWrongSpotsThatAreInSameSpotsInWord,
-                            letters=positionsOfLettersInWrongSpots,
+                            _filter_with_yellow_letters,
+                            yellow_letter_positions=positions_of_yellow_letters,
                         ),
-                        filter(
-                            partial(allLettersInWord, letters=top_n_letters),
-                            len_five_words,
-                        ),
+                        THE_DICTIONARY,
                     )
                 )
             else:
                 results = list(
                     filter(
                         partial(allLettersInWord, letters=top_n_letters),
-                        len_five_words,
+                        THE_DICTIONARY,
                     )
                 )
 
@@ -247,6 +302,30 @@ def suggestWordsWithMaxInformation(
             else:
                 found_words = results
                 break
+
+        """
+        If we STILL haven't found anything, recursively call this function,
+        but with a less restrictive `num_search_letters`
+        """
+        if not found_words and num_search_letters - 1 > 0:
+            found_words = suggestWordsWithMaxInformation(
+                word_list=word_list,
+                positionalLetters=positionalLetters,
+                num_search_letters=num_search_letters - 1,
+                positions_of_yellow_letters=positions_of_yellow_letters,
+            )
+        """
+        If we somehow still haven't found anything, as a last resort to return
+        some sort of results, recursively return what this function would have
+        returned had yellow letter positions not been passed.
+        """
+        if not found_words:
+            found_words = suggestWordsWithMaxInformation(
+                word_list=word_list,
+                positionalLetters=positionalLetters,
+                num_search_letters=num_search_letters,
+                positions_of_yellow_letters=None,
+            )
 
     return found_words
 
@@ -449,12 +528,12 @@ the most information out of the next word:\n"""
                 word_suggestions = suggestWordsWithMaxInformation(
                     word_list=found_words,
                     positionalLetters=self._letters_in_word_positional,
-                    min_search_letters=4,
-                    # positionsOfLettersInWrongSpots=self._positions_of_letters_in_wrong_spots,
-                )  # TODO: rewrite suggestWordsWithMaxInformation() to accomodate new argument
+                    num_search_letters=5,
+                    positions_of_yellow_letters=self._positions_of_letters_in_wrong_spots,
+                )
 
-                # only return the top five results
-                for idx, word in enumerate(word_suggestions[:5]):
+                # only return the top ten results
+                for idx, word in enumerate(word_suggestions[:10]):
                     print(f"{idx + 1}. {word}")
                 print("")
             elif len(found_words) == 0:
