@@ -1,0 +1,3 @@
+from wordle import _filter_with_yellow_letters_run_tests
+
+_filter_with_yellow_letters_run_tests()

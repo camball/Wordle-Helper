@@ -3,18 +3,13 @@
 Example usage:
 ```py
 import wordle
-import json
 
-with open("words_dictionary.json") as words:
-    the_dictionary: dict = json.load(words)
+the_dictionary = wordle.get_dictionary()
 
 for word in the_dictionary:
-    if len(word) != 5:
-        continue
-
     if (
-        wordle.allLettersInWordPositional(word, "?ar?a") and
-        wordle.doesNotContain(word, "eoshkcnm")
+        wordle.all_letters_in_word_positional(word, "?ar?a") and
+        wordle.does_not_contain(word, "eoshkcnm")
     ):
         print("Found word:", word)
 ```
@@ -34,7 +29,7 @@ from sys import exit as sys_exit
 import inflect
 
 
-def removePlurals(word_list: Iterable) -> set[str]:
+def remove_plurals(word_list: Iterable) -> set[str]:
     """Remove all plural nouns from `word_list`. Powered by the `inflect` library."""
     inf = inflect.engine()
     # documentation is hard to understand for this function, so this was
@@ -42,18 +37,18 @@ def removePlurals(word_list: Iterable) -> set[str]:
     return {word for word in word_list if not inf.singular_noun(word)}
 
 
-def getDictionary() -> set[str]:
+def get_dictionary() -> set[str]:
     """Return a set of all 5-letter words."""
     with open("words_dictionary.json") as words:
         return set(filter(lambda word: len(word) == 5, json.load(words)))
 
 
-def allLettersInWord(word: str, letters: Iterable) -> bool:
+def all_letters_in_word(word: str, letters: Iterable) -> bool:
     """A shorthand function for a bunch of `if \"c\" in word and \"b\" in word...`'s"""
     return all((letter in word for letter in letters))
 
 
-def allLettersInWordPositional(word: str, letters: Sequence) -> bool:
+def all_letters_in_word_positional(word: str, letters: Sequence) -> bool:
     """A shorthand function for a bunch of `if word[0] == \"c\" and word[2] == \"b\"...`'s
 
     For any letter that you want to be "any" letter, use the '?' wildcard.
@@ -70,7 +65,7 @@ def allLettersInWordPositional(word: str, letters: Sequence) -> bool:
     return True
 
 
-def doesNotContain(
+def does_not_contain(
     word: Sequence[str],
     lettersNotInWord: Iterable,
     knownCorrectPositions: Sequence[str] | None = None,
@@ -105,32 +100,87 @@ def doesNotContain(
     return not any((letter in word for letter in lettersNotInWord))
 
 
-def noLettersInWrongSpotsThatAreInSameSpotsInWord(word: str, letters: Sequence) -> bool:
-    """My sincerest apologies for the abomination of a function name. It's 4:28
-    AM as I am coding this, and I had no idea what to call it. I've been coding
-    for four hours straight now, but I'm in too deep to stop so here we are.
-    I'm tired.
+# def noLettersInWrongSpotsThatAreInSameSpotsInWord(word: str, letters: Sequence) -> bool:
+#     """My sincerest apologies for the abomination of a function name. It's 4:28
+#     AM as I am coding this, and I had no idea what to call it. I've been coding
+#     for four hours straight now, but I'm in too deep to stop so here we are.
+#     I'm tired.
+#     """
+#     for matchLetter, wordLetter in zip(letters, word, strict=True):
+#         if matchLetter == wordLetter:
+#             return False
+#         else:
+#             continue
+
+#     return True
+
+
+def _filter_with_yellow_letters(
+    word: str, yellow_letter_positions: dict[str, list[bool]]
+) -> bool:
     """
-    for matchLetter, wordLetter in zip(letters, word, strict=True):
-        if matchLetter == wordLetter:
+    We want to filter out words that have any letter
+
+    If `word` is "angry" and our dict is:
+    {
+        "a": [True, False, False, False, True]
+        ...
+    }
+    then we should return False, because `word` contains a letter that has
+
+    For each letter in the dictionary, checks if the location in `word` for that letter returns True.
+    """
+    # for dict_letter, places_letter_cannot_be in yellow_letter_positions.items():
+    #     for word_letter, letter_is_yellow in zip(word, places_letter_cannot_be):
+    #         if letter_is_yellow and dict_letter == word_letter:
+    #             return False
+
+    #     # if the letter isn't in the word at all... obviously return False
+    #     if dict_letter not in word:
+    #         return False
+
+    # return True
+
+    """
+    The following implementation and the commented-out above implementation return the exact same results.
+    I think the below one is a better implementation, though. It was the 2nd I wrote.
+    """
+
+    for yellow_letter, positions in yellow_letter_positions.items():
+        for idx, letter in enumerate(word):
+            if letter == yellow_letter and positions[idx] is True:
+                return False
+
+        # if the letter isn't in the word at all... obviously return False
+        if yellow_letter not in word:
             return False
-        else:
-            continue
 
     return True
 
 
-def suggestWordsWithMaxInformation(
+def _filter_with_yellow_letters_run_tests():
+    words = ["angry", "alias", "super", "place", "house", "angse", "nasty"]
+
+    yellow_letter_positions = {
+        "a": [True, False, False, False, False],
+        "s": [False, False, False, True, False],
+    }
+
+    for word in words:
+        print(word, _filter_with_yellow_letters(word, yellow_letter_positions))
+
+
+def suggest_words_with_max_information(
     word_list: list[str],
     positionalLetters: Sequence[str],
-    min_search_letters: int,
-    positionsOfLettersInWrongSpots: Sequence[str] | None = None,
-):
+    num_search_letters: int,
+    positions_of_yellow_letters: dict[str, list[bool]] | None = None,
+) -> list[str]:
     """
     Scans through `word_list`, and creates a distribution of the most frequent
     letters from each word. It then finds words from the dictionary that
     contain the as many of the most common letters as possible (minimum allowed
-    amount specified by `min_search_letters`), and suggests words to play next
+    amount specified by `num_search_letters`), and suggests words to play next
     that would maximise the amount of information you could get from a single
     word.
 
@@ -139,35 +189,31 @@ def suggestWordsWithMaxInformation(
     information you already have (i.e., by calling `wordle.doesNotContain()`,
     etc.). Then, pass that filtered list to this function's `word_list`.
 
-    `min_search_letters` must be on the interval [1,5]. You probably won't get
+    `num_search_letters` must be on the interval [1,5]. You probably won't get
     useful results unless you use it with 3 or 4 though, as 5 will most likely
     yield no results as it is too restrictive, and 1 or 2 will likely yield too
     many results. However, trying 5 first may not be a bad idea because on the
     off chance that it does return a result, that would yield the highest
     amount of information.
-
-    If a value is passed to `positionsOfLettersInWrongSpots`, this function
-    will use those values to better reduce `word_list`. The value passed to
-    this argument should be five characters long and of the form "?F??R", for
-    example. In that example, the syntax means "F is in the word, but it's not
-    in the 2nd spot, and R is in the word, but it's not in the 5th spot." If
-    nothing is passed, this functionality is ignored. The philosophy behind
-    this argument's existence is that if we have a letter that we know is in
-    the word, but not where it is in the word, we don't want to play a word
-    that has the letter in that same spot; we want to try a new spot to try and
-    discover a positional letter.
-
-    Functionality that may make it into this function at a future date:
-    If a value is passed to this argument (positionsOfLettersInWrongSpots) and
-    no results are returned, this function resorts to how it would function as
-    if nothing was passed to this argument as a last-chance attempt to return
-    some sort of results.
     """
-    if positionsOfLettersInWrongSpots and len(positionsOfLettersInWrongSpots) != 5:
-        raise ValueError(
-            "argument `positionsOfLettersInWrongSpots` must be of length 5."
-        )
 
+    """
+    Compute most common letters from `word_list` that aren't already known.
+    Say our word list is:
+    - under
+    - alias
+    - class
+    and `positionalLetters` is '?g??s'.
+
+    Then this portion of this function will ignore the 1 and 4 indices, since we
+    already know what's at those spots. It will take the letters from the 0, 2, 3
+    spots of all words in `word_list` (i.e., {u,d,e,a,i,c,s}) and give us a Counter
+    object which we use to get `num_search_letters` most common letters, which we
+    store in `top_n_letters`.
+    
+    Those letters are used to filter the dictionary by, so we are only searching
+    with the most likely guesses.
+    """
     unknown_letter_indices = [
         idx for idx, letter in enumerate(positionalLetters) if letter == "?"
     ]
@@ -181,63 +227,67 @@ def suggestWordsWithMaxInformation(
         if idx in unknown_letter_indices
     ]
 
-    len_five_words = getDictionary()
+    THE_DICTIONARY = get_dictionary()
 
     most_common_letters = Counter(unknown_letters)
 
     top_n_letters = [
-        letter for letter, _ in most_common_letters.most_common(min_search_letters)
+        letter for letter, _ in most_common_letters.most_common(num_search_letters)
     ]
 
-    if positionsOfLettersInWrongSpots:
+    """
+    Attempt to find suggestions by filtering the dictionary.
+    """
+    if positions_of_yellow_letters:
         found_words = list(
             filter(
                 partial(
-                    noLettersInWrongSpotsThatAreInSameSpotsInWord,
-                    letters=positionsOfLettersInWrongSpots,
+                    _filter_with_yellow_letters,
+                    yellow_letter_positions=positions_of_yellow_letters,
                 ),
-                filter(
-                    partial(allLettersInWord, letters=top_n_letters),
-                    len_five_words,
-                ),
+                THE_DICTIONARY,
             )
         )
     else:
         found_words = list(
             filter(
-                partial(allLettersInWord, letters=top_n_letters),
-                len_five_words,
+                partial(all_letters_in_word, letters=top_n_letters),
+                THE_DICTIONARY,
             )
         )
 
+    """
+    If no words were found, use a different set of letters and see if we get results that way.
+
+    For example, if our top 3 most common letters are [r, n, k], but no results are
+    returned, ditch the 'k' and move onto the next most common letter, searching with
+    [r, n, t], for example.
+    """
     if not found_words:
         offset = 1  # initialise here, increment later if no results
-        while min_search_letters + offset <= len(most_common_letters):
+        while num_search_letters + offset <= len(most_common_letters):
             # remove the least most common letter and see if adding the next
             # most common letter will give us any results
             top_n_letters.pop()
             top_n_letters.append(
-                most_common_letters.most_common(min_search_letters + offset).pop()[0]
+                most_common_letters.most_common(num_search_letters + offset).pop()[0]
             )
 
-            if positionsOfLettersInWrongSpots:
+            if positions_of_yellow_letters:
                 results = list(
                     filter(
                         partial(
-                            noLettersInWrongSpotsThatAreInSameSpotsInWord,
-                            letters=positionsOfLettersInWrongSpots,
+                            _filter_with_yellow_letters,
+                            yellow_letter_positions=positions_of_yellow_letters,
                         ),
-                        filter(
-                            partial(allLettersInWord, letters=top_n_letters),
-                            len_five_words,
-                        ),
+                        THE_DICTIONARY,
                     )
                 )
             else:
                 results = list(
                     filter(
-                        partial(allLettersInWord, letters=top_n_letters),
-                        len_five_words,
+                        partial(all_letters_in_word, letters=top_n_letters),
+                        THE_DICTIONARY,
                     )
                 )
 
@@ -247,6 +297,30 @@ def suggestWordsWithMaxInformation(
             else:
                 found_words = results
                 break
+
+        """
+        If we STILL haven't found anything, recursively call this function,
+        but with a less restrictive `num_search_letters`
+        """
+        if not found_words and num_search_letters - 1 > 0:
+            found_words = suggest_words_with_max_information(
+                word_list=word_list,
+                positionalLetters=positionalLetters,
+                num_search_letters=num_search_letters - 1,
+                positions_of_yellow_letters=positions_of_yellow_letters,
+            )
+        """
+        If we somehow still haven't found anything, as a last resort to return
+        some sort of results, recursively return what this function would have
+        returned had yellow letter positions not been passed.
+        """
+        if not found_words:
+            found_words = suggest_words_with_max_information(
+                word_list=word_list,
+                positionalLetters=positionalLetters,
+                num_search_letters=num_search_letters,
+                positions_of_yellow_letters=None,
+            )
 
     return found_words
 
@@ -262,14 +336,14 @@ class Wordle:
     plurals (i.e., in suggestWordsWithMaxInformation()), so that we can suggest
     the best possible guess, whether it would be a winner or not.
     """
-    THE_DICTIONARY = removePlurals(getDictionary())
+    THE_DICTIONARY = remove_plurals(get_dictionary())
 
     _found_words_threshold = 30
 
     def __init__(self) -> None:
         self._letters_not_in_word = set()
-        self._letters_in_word_positional = ["?", "?", "?", "?", "?"]
-        self._positions_of_letters_in_wrong_spots: dict[str, list[bool]] = {
+        self._green_letter_positions = ["?", "?", "?", "?", "?"]
+        self._yellow_letter_positions: dict[str, list[bool]] = {
             letter: [False] * 5 for letter in ascii_lowercase
         }
         """
@@ -291,17 +365,17 @@ class Wordle:
         """
 
     @staticmethod
-    def _lettersInWordInWrongSpotsToSet(
-        positionsOfLettersInWrongSpots: dict[str, list[bool]],
+    def _yellow_letter_positions_to_set(
+        yellow_letter_positions: dict[str, list[bool]],
     ) -> set[str]:
         return {
             letter
-            for letter, positions in positionsOfLettersInWrongSpots.items()
+            for letter, positions in yellow_letter_positions.items()
             if any(positions)
         }
 
     @staticmethod
-    def _infoHasInvalidCharacters(information: str) -> bool:
+    def _info_has_invalid_chars(information: str) -> bool:
         for char in information:
             if char.upper() not in {"X", "Y", "G"}:
                 return True
@@ -309,7 +383,9 @@ class Wordle:
         return False
 
     @staticmethod
-    def _processInput(wordPlayed: str, information: str) -> tuple[set, list, list]:
+    def _process_input(
+        word_played: str, information: str
+    ) -> tuple[set[str], list[str], list[str]]:
         """
         Take in the word that was played and the Grey, Yellow, and Green information
         about the word, and return a tuple containing:
@@ -319,56 +395,56 @@ class Wordle:
 
         This function can be tuple-unpacked as input to the `Wordle._updateWordInformation()` method.
         """
-        lettersNotInWord = set()
-        lettersInWordInWrongSpots = ["?", "?", "?", "?", "?"]
-        lettersInWordPositional = ["?", "?", "?", "?", "?"]
+        letters_not_in_word = set()
+        yellow_letter_positions = ["?", "?", "?", "?", "?"]
+        green_letter_positions = ["?", "?", "?", "?", "?"]
 
         # Don't need to check for arg lengths to be the same. Arguments checked beforehand.
-        for idx, (letter, letterInfo) in enumerate(zip(wordPlayed, information)):
+        for idx, (letter, letterInfo) in enumerate(zip(word_played, information)):
             letterInfo = letterInfo.upper()
             if letterInfo == "X":
-                lettersNotInWord.add(letter)
+                letters_not_in_word.add(letter)
             elif letterInfo == "Y":
-                lettersInWordInWrongSpots[idx] = letter
+                yellow_letter_positions[idx] = letter
             elif letterInfo == "G":
-                lettersInWordPositional[idx] = letter
+                green_letter_positions[idx] = letter
 
-        return lettersNotInWord, lettersInWordInWrongSpots, lettersInWordPositional
+        return letters_not_in_word, yellow_letter_positions, green_letter_positions
 
-    def _updateWordInformation(
+    def _update_word_information(
         self,
-        lettersNotInWord: set,
-        lettersInWordInWrongSpots: list,
-        lettersInWordPositional: list,
+        letters_not_in_word: set[str],
+        yellow_letter_positions: Sequence[str],
+        green_letter_positions: Sequence[str],
     ):
         """Update the internal representation of the known information about
         the word with any new information that has been found out. This function
         has three jobs:
-        1. Union `lettersNotInWord` with `self._letters_not_in_word`
-        2. Union `lettersInWord` with `self._letters_in_word`, and remove any letters discovered positionally
-        3. Merge `lettersInWordPositional` with `self._letters_in_word_positional`
+        1. Union `letters_not_in_word` with `self._letters_not_in_word`
+        2. Use `yellow_letter_positions` to update `self._yellow_letter_positions`, and remove any letters discovered positionally
+        3. Merge `green_letter_positions` with `self._green_letter_positions`
         """
 
         # update letters not in word
-        self._letters_not_in_word = self._letters_not_in_word | lettersNotInWord
+        self._letters_not_in_word = self._letters_not_in_word | letters_not_in_word
 
         # update letters in word in wrong spots
-        for idx, letter in enumerate(lettersInWordInWrongSpots):
+        for idx, letter in enumerate(yellow_letter_positions):
             if letter != "?":
-                self._positions_of_letters_in_wrong_spots[letter][idx] = True
+                self._yellow_letter_positions[letter][idx] = True
 
         # update letters in word with known position
-        for idx, letter in enumerate(lettersInWordPositional):
+        for idx, letter in enumerate(green_letter_positions):
             if letter != "?":
-                self._letters_in_word_positional[idx] = letter
+                self._green_letter_positions[idx] = letter
 
         # if we discover a known-position letter, take it out of the letters-in-wrong-spots list
-        for idx, letter in enumerate(self._letters_in_word_positional):
+        for idx, letter in enumerate(self._green_letter_positions):
             if letter != "?":
                 # This will never throw KeyError/is safe. We are always passing
                 # a letter from ascii_lowercase and the dictionary always
                 # contains all of ascii_lowercase as keys.
-                self._positions_of_letters_in_wrong_spots[letter][idx] = True
+                self._yellow_letter_positions[letter][idx] = True
 
     def play(self) -> None:
         print(
@@ -400,7 +476,7 @@ class Wordle:
                         "Invalid input. Ensure your word information is five characters."
                     )
                     continue
-                elif Wordle._infoHasInvalidCharacters(information):
+                elif Wordle._info_has_invalid_chars(information):
                     print(
                         "Invalid input. Word information can only contain charactes 'X', 'Y', and 'G'."
                     )
@@ -408,26 +484,28 @@ class Wordle:
                     break
 
             # update internal word knowledge to ultimately filter dictionary with
-            self._updateWordInformation(*Wordle._processInput(wordPlayed, information))
+            self._update_word_information(
+                *Wordle._process_input(wordPlayed, information)
+            )
 
             # compute most likely words for user
             found_words = list(
                 filter(  # filter out all words that contain letters in the "not in word" list (in the non-positional spots)
                     partial(
-                        doesNotContain,
+                        does_not_contain,
                         lettersNotInWord=self._letters_not_in_word,
-                        knownCorrectPositions=self._letters_in_word_positional,
+                        knownCorrectPositions=self._green_letter_positions,
                     ),
                     filter(  # filter out all words that don't match the positional letter prototype
                         partial(
-                            allLettersInWordPositional,
-                            letters=self._letters_in_word_positional,
+                            all_letters_in_word_positional,
+                            letters=self._green_letter_positions,
                         ),
                         filter(  # filter out all words that don't have all the yellow letters
                             partial(
-                                allLettersInWord,
-                                letters=Wordle._lettersInWordInWrongSpotsToSet(
-                                    self._positions_of_letters_in_wrong_spots
+                                all_letters_in_word,
+                                letters=Wordle._yellow_letter_positions_to_set(
+                                    self._yellow_letter_positions
                                 ),
                             ),
                             Wordle.THE_DICTIONARY,
@@ -446,15 +524,15 @@ class Wordle:
 the most information out of the next word:\n"""
                 )
 
-                word_suggestions = suggestWordsWithMaxInformation(
+                word_suggestions = suggest_words_with_max_information(
                     word_list=found_words,
-                    positionalLetters=self._letters_in_word_positional,
-                    min_search_letters=4,
-                    # positionsOfLettersInWrongSpots=self._positions_of_letters_in_wrong_spots,
-                )  # TODO: rewrite suggestWordsWithMaxInformation() to accomodate new argument
+                    positionalLetters=self._green_letter_positions,
+                    num_search_letters=5,
+                    positions_of_yellow_letters=self._yellow_letter_positions,
+                )
 
-                # only return the top five results
-                for idx, word in enumerate(word_suggestions[:5]):
+                # only return the top ten results
+                for idx, word in enumerate(word_suggestions[:10]):
                     print(f"{idx + 1}. {word}")
                 print("")
             elif len(found_words) == 0:
@@ -473,8 +551,8 @@ time, common words are more likely to be the answer than very odd words.\n"""
                 print("")
 
 
-def _wordFinder():
-    theDictionary = getDictionary()
+def _word_finder():
+    theDictionary = get_dictionary()
 
     while True:
         resp = input("Filter plurals from results? [Y/n]: ")[0].upper()
@@ -482,7 +560,7 @@ def _wordFinder():
             print("Please enter a valid response... [y/n]")
         else:
             if resp == "Y":
-                theDictionary = removePlurals(theDictionary)
+                theDictionary = remove_plurals(theDictionary)
             break
 
     positionalLetterCheck = re.compile(r"^[a-z?]{5}$")
@@ -514,11 +592,11 @@ def _wordFinder():
 
     found_words = list(
         filter(
-            partial(doesNotContain, lettersNotInWord=lettersNotInWord),
+            partial(does_not_contain, lettersNotInWord=lettersNotInWord),
             filter(
-                partial(allLettersInWordPositional, letters=word_prototype),
+                partial(all_letters_in_word_positional, letters=word_prototype),
                 filter(
-                    partial(allLettersInWord, letters=letters),
+                    partial(all_letters_in_word, letters=letters),
                     theDictionary,
                 ),
             ),
@@ -536,7 +614,7 @@ common words are more likely to be the answer than very odd words.\n"""
     print("")
 
 
-def _printMenu(options: dict[str, str]):
+def _print_menu(options: dict[str, str]):
     for k, v in options.items():
         print(
             "{k:<{maxKeyLen}} : {v:>4}".format(
@@ -546,7 +624,7 @@ def _printMenu(options: dict[str, str]):
     print("")
 
 
-def _printInstructions():
+def _print_instructions():
     print(
         """For interactive WORDLE solver mode, enter 'P' at the menu.
 For an advanced word finder mode to help with individual WORDLE steps, enter 'A' at the menu.
@@ -571,7 +649,7 @@ For an advanced word finder mode to help with individual WORDLE steps, enter 'A'
     )
 
 
-def _printCredits():
+def _print_credits():
     print("This program © 2022 Cameron Ball. All rights reserved.\n")
 
 
@@ -586,23 +664,23 @@ def main():
         "Quit": "Q",
     }
 
-    _printMenu(menu_options)
+    _print_menu(menu_options)
     while True:
         cmd = input("> ").upper()
         print("")
         if cmd not in menu_options.values():
             print("Invalid option. Valid options include:")
-            _printMenu(menu_options)
+            _print_menu(menu_options)
         elif cmd == "I":
-            _printInstructions()
+            _print_instructions()
         elif cmd == "A":
-            _wordFinder()
+            _word_finder()
         elif cmd == "P":
             game = Wordle()
             game.play()
             print("[Game ended]\n")
         elif cmd == "C":
-            _printCredits()
+            _print_credits()
         elif cmd == "Q":
             break
 
