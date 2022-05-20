@@ -172,7 +172,7 @@ def _filter_with_yellow_letters_run_tests():
 
 def suggest_words_with_max_information(
     word_list: list[str],
-    positionalLetters: Sequence[str],
+    green_letter_positions: Sequence[str],
     num_search_letters: int,
     positions_of_yellow_letters: dict[str, list[bool]] | None = None,
 ) -> list[str]:
@@ -215,7 +215,7 @@ def suggest_words_with_max_information(
     with the most likely guesses.
     """
     unknown_letter_indices = [
-        idx for idx, letter in enumerate(positionalLetters) if letter == "?"
+        idx for idx, letter in enumerate(green_letter_positions) if letter == "?"
     ]
 
     # a list of all the letters from words in word_list that could possibly be
@@ -305,7 +305,7 @@ def suggest_words_with_max_information(
         if not found_words and num_search_letters - 1 > 0:
             found_words = suggest_words_with_max_information(
                 word_list=word_list,
-                positionalLetters=positionalLetters,
+                green_letter_positions=green_letter_positions,
                 num_search_letters=num_search_letters - 1,
                 positions_of_yellow_letters=positions_of_yellow_letters,
             )
@@ -317,7 +317,7 @@ def suggest_words_with_max_information(
         if not found_words:
             found_words = suggest_words_with_max_information(
                 word_list=word_list,
-                positionalLetters=positionalLetters,
+                green_letter_positions=green_letter_positions,
                 num_search_letters=num_search_letters,
                 positions_of_yellow_letters=None,
             )
@@ -526,7 +526,7 @@ the most information out of the next word:\n"""
 
                 word_suggestions = suggest_words_with_max_information(
                     word_list=found_words,
-                    positionalLetters=self._green_letter_positions,
+                    green_letter_positions=self._green_letter_positions,
                     num_search_letters=5,
                     positions_of_yellow_letters=self._yellow_letter_positions,
                 )
